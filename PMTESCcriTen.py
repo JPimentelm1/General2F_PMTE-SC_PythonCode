@@ -426,6 +426,10 @@ def PMTESCcriTen(name_files, working_directory, setnodeInt, dicc_NeL_T):
     	getSubset(region=InterElementSet).values
     path_SDV14=odb.steps[key_step[0]].frames[-1].fieldOutputs['SDV14'].\
     	getSubset(region=InterElementSet).values
+    path_SDV15=odb.steps[key_step[0]].frames[-1].fieldOutputs['SDV15'].\
+    	getSubset(region=InterElementSet).values
+    path_SDV16=odb.steps[key_step[0]].frames[-1].fieldOutputs['SDV16'].\
+    	getSubset(region=InterElementSet).values
     path_SDV19=odb.steps[key_step[0]].frames[-1].fieldOutputs['SDV19'].\
     	getSubset(region=InterElementSet).values	
        
@@ -482,11 +486,14 @@ def PMTESCcriTen(name_files, working_directory, setnodeInt, dicc_NeL_T):
     #ademas meto en una lista los PI rotos para despues escribirlos en los archivos
     #si finalmente hay algun elmento dagnado
     #-----------------------------------------------------------------------------------------------------------------------
+    listaElem=[]
     dagnokm1=[]; Gclst=[];
     for k in range(intpoint): 
         damage=path_SDV1[k].data
         GtotT=path_SDV4[k].data #la G en cada punto de integracion del criterio tensional 
         GcT=path_SDV5[k].data #la Gc del criterio tensional del criterio tensional 
+        t=path_SDV15[k].data
+        tc=path_SDV16[k].data
         ip=path_SDV2[k].integrationPoint
         NeG=path_SDV2[k].data
         psi_g=math.atan2(path_SDV14[k].data*(math.sqrt(1/xi)), path_SDV13[k].data)
@@ -499,7 +506,7 @@ def PMTESCcriTen(name_files, working_directory, setnodeInt, dicc_NeL_T):
             Gclst.append([float(180) - math.atan(y/abs(x)), GcE])
         
             
-        if damage!=0.00 and GtotT>=GcT: #damage=0 yes damage by CT.
+        if damage!=0.00 and t>=tc: #damage=0 yes damage by CT.
             NeL=path_SDV2[k].elementLabel
             NeL2=str(path_SDV2[k].elementLabel)+'_'+str(path_SDV2[k].instance.name)
             # GcE=path_SDV6[k].data #la Gc del criterio tensional del criterio energetico 
@@ -527,6 +534,9 @@ def PMTESCcriTen(name_files, working_directory, setnodeInt, dicc_NeL_T):
             dicc_NeL[NeL2][8]=dicc_NeL[NeL2][8]+GcE*jacobElm
         		#sumo los puntos de integracion que cumplen el criterio tensional dentro de un elemento	
             dicc_NeL[NeL2][10]=dicc_NeL[NeL2][10]+ip; dicc_NeL[NeL2][11]=int(NeL)
+            if dicc_NeL[NeL2][10]==10:
+                dicc_NeL[NeL2][9]=t/tc
+                listaElem.append(dicc_NeL[NeL2])
         if damage==0.00: #damage=0 yes damage
         		#guardo en una lista los PI rotos para despues escribrir en archivos 
         		#si finalmente hay algun elemento dagnado
@@ -541,7 +551,8 @@ def PMTESCcriTen(name_files, working_directory, setnodeInt, dicc_NeL_T):
     #convierto en lista los valores del diccionario que he creado
     #y posteriormente en un array porque es mas rapido
     #-----------------------------------------------------------------------------------------------------------------------
-    listaElem=list(dicc_NeL.values())
+    # listaElem=list(dicc_NeL.values())
+    
     # esto no hace falta si no obligamos a que rompan todos los PI por CT
     # listaElem.sort(key=lambda listaElem:listaElem[10],reverse=True)
     
@@ -561,9 +572,9 @@ def PMTESCcriTen(name_files, working_directory, setnodeInt, dicc_NeL_T):
     		
     # Este bucle es para almacenar el dagno si queremos obligar a romper por CT todos los PI
     for elem in listaElem:
-       	if elem[6]>elem[7] and elem[10]==10:
-            elem[9]=sqrt(elem[6]/elem[7])
-            dameleCT.append(elem)
+       	# if elem[6]>elem[7] and elem[10]==10:
+        #     elem[9]=sqrt(elem[6]/elem[7])
+        dameleCT.append(elem)
             #dameleCT es una lista de cada elemento dagnado con toda la informacion 
     		#que tiene el diccionario dicc_NeL de ese elemento
     # for elem in range(elementos):
@@ -634,7 +645,7 @@ def PMTESCcriTen(name_files, working_directory, setnodeInt, dicc_NeL_T):
                 # and dameleCT[elem][9]>=0.75*(dameleCT[0][9]):
                 # and dameleCT[elem][9]<0.5*max(dameleCT[:][9]):
                 if dameleCT[elem][0].endswith('_INTERFACE1-1'):
-                    print(n, dameleCT[elem][0], dameleCT[elem][9])
+                    # print(n, dameleCT[elem][0], dameleCT[elem][9])
                     damage=0; #listafunN[1](dameleCT[elem][5],longitud);
                     # cntinterf1+=1;\
                 
@@ -653,10 +664,10 @@ def PMTESCcriTen(name_files, working_directory, setnodeInt, dicc_NeL_T):
                 for ip in range(1,5):
                     listarchivos[n].write('%d %d %d %d\n' % (ip,NeG,damage,dameleCT[elem][11]))
             # N = 2        
-            if n==2 and abs(dameleCT[elem][3])>0 and dameleCT[elem][9]>=0.70*(dameleCT[0][9]): 
+            if n==2 and abs(dameleCT[elem][3])>0 and dameleCT[elem][9]>=0.50*(dameleCT[0][9]): 
                 # and dameleCT[elem][9]>=0.5*(dameleCT[0][9]):
                 if dameleCT[elem][0].endswith('_INTERFACE1-1'):
-                    print(n, dameleCT[elem][0], dameleCT[elem][9])
+                    # print(n, dameleCT[elem][0], dameleCT[elem][9])
                     # and dameleCT[elem][9]<0.25*max(dameleCT[:][9]):
                     #rompe el resorte del PI
                     damage=0; #listafunN[n](dameleCT[elem][5],longitud);
@@ -678,23 +689,29 @@ def PMTESCcriTen(name_files, working_directory, setnodeInt, dicc_NeL_T):
                 NeG=dameleCT[elem][1];
                 for ip in range(1,5):
                     listarchivos[n].write('%d %d %d %d\n' % (ip,NeG,damage,dameleCT[elem][11]))
-            # #*** N = 3 ***            
-            if n==3 and abs(dameleCT[elem][3])>0:
-                # and dameleCT[elem][9]>=0.25*(dameleCT[0][9]): 
-                # and elem <= round(len(dameleCT)*dfraction)
-                # if dameleCT[elem][0].endswith('_INTERFACE1-1'):
-                # print(n, dameleCT[elem][0], dameleCT[elem][9])
-                damage=0; #listafunN[1](dameleCT[elem][5],longitud)
-                # dameleCT[elem].append(damage);
-                # NeG=dameleCT[elem][1]
-                # # print('\n');\
-                # # print((dameleCT[elem][0],damage));\
-                # # print('\n');
-                # for ip in range(1,5):
-                #     listarchivos[n+1].write('%d %d %e \n' % (ip,NeG,damage))
-                # if dameleCT[elem][0].endswith('_INTERFACE2-1'):
+            
+            #*** N = 3 ***            
+            if n==3 and abs(dameleCT[elem][3])>0 and dameleCT[elem][9]>=0.20*(dameleCT[0][9]): 
+                # and dameleCT[elem][9]>=0.5*(dameleCT[0][9]):
+                if dameleCT[elem][0].endswith('_INTERFACE1-1'):
+                    # print(n, dameleCT[elem][0], dameleCT[elem][9])
+                    # and dameleCT[elem][9]<0.25*max(dameleCT[:][9]):
+                    #rompe el resorte del PI
+                    damage=0; #listafunN[n](dameleCT[elem][5],longitud);
+                    # cntinterf2+=1;
+                    # dameleCT[elem].append(damage);
+                    # NeG=dameleCT[elem][1];
+                    # for ip in range(1,5):
+                    #     listarchivos[n+1].write('%d %d %e \n' % (ip,NeG,damage))
+                # Check if the element ends with the target string        
+                elif dameleCT[elem][0].endswith('_INTERFACE2-1'):
                 # else:
-                    # damage=1.0;
+                        # If it does, append it to the filtered list
+                        damage=1.0;
+                        # dameleCT[elem].append(dam2);
+                        # NeGi=dameleCT[elem][1]
+                        # for ip in range(1,5):
+                        #     listarchivos[n+1].write('%d %d %e \n' % (ip,NeGi,dam2))
                 dameleCT[elem].append(damage);
                 NeG=dameleCT[elem][1];
                 for ip in range(1,5):
